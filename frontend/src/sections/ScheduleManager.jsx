@@ -15,6 +15,46 @@ const ScheduleManager = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  // Pour éviter des alertes multiples pour la même tâche
+  const [alertedTaskIds, setAlertedTaskIds] = useState([]);
+
+  // Demande la permission de notification au chargement
+  useEffect(() => {
+    if (window.Notification && Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Vérifie toutes les secondes si une tâche doit commencer
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      schedule.forEach(s => {
+        if (!s.start_datetime) return;
+        const start = new Date(s.start_datetime);
+        // Si la tâche commence dans moins de 5 secondes (et pas déjà alertée)
+        const diff = start - now;
+        if (
+          diff <= 5000 && diff > 0 &&
+          !alertedTaskIds.includes(s.id)
+        ) {
+          const t = tasks.find(t => t.id === s.task_id);
+          // Notification système + son
+          if (window.Notification && Notification.permission === "granted") {
+            new Notification(`La tâche "${t ? t.name : 'Tâche'}" commence maintenant !`);
+          }
+          // Jouer un son
+          try {
+            const audio = new Audio("/notify.mp3");
+            audio.play();
+          } catch (e) {}
+          alert(`La tâche "${t ? t.name : 'Tâche'}" commence maintenant !`);
+          setAlertedTaskIds(prev => [...prev, s.id]);
+        }
+      });
+    }, 1000); // toutes les secondes
+    return () => clearInterval(interval);
+  }, [schedule, tasks, alertedTaskIds]);
 
   const fetchSchedule = async () => {
     setLoading(true);
