@@ -86,15 +86,55 @@ export async function exportFullReport({ schedule, tasks, availabilities, energy
   });
   y = doc.lastAutoTable.finalY + 8;
 
-  // Section Statistiques de productivité
+  // Section Résumé des tâches terminées chaque jour
   doc.setFontSize(16);
-  doc.text('Statistiques de productivité', 10, y);
+  doc.text('Résumé des tâches terminées chaque jour', 10, y);
   y += 6;
   const prodRows = productivityStats.map(stat => [stat.date, stat.completed]);
   autoTable(doc, {
     startY: y,
-    head: [['Date', 'Tâches terminées']],
+    head: [['Date', 'Tâches finies']],
     body: prodRows
+  });
+  y = doc.lastAutoTable.finalY + 8;
+
+  // Section Statistiques avancées
+  doc.setFontSize(16);
+  doc.text('Statistiques avancées', 10, y);
+  y += 6;
+  // Répartition par catégorie
+  const catCounts = {};
+  tasks.forEach(t => { catCounts[t.categorie] = (catCounts[t.categorie] || 0) + 1; });
+  const catRows = Object.entries(catCounts).map(([cat, count]) => [cat, count]);
+  autoTable(doc, {
+    startY: y,
+    head: [['Catégorie', 'Nombre de tâches']],
+    body: catRows
+  });
+  y = doc.lastAutoTable.finalY + 4;
+  // Répartition par priorité
+  const prioCounts = {};
+  tasks.forEach(t => { prioCounts[t.priority] = (prioCounts[t.priority] || 0) + 1; });
+  const prioRows = Object.entries(prioCounts).map(([prio, count]) => [prio, count]);
+  autoTable(doc, {
+    startY: y,
+    head: [['Priorité', 'Nombre de tâches']],
+    body: prioRows
+  });
+  y = doc.lastAutoTable.finalY + 4;
+  // Tâches terminées par jour de la semaine
+  const days = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+  const completedByDay = Array(7).fill(0);
+  productivityStats.forEach(stat => {
+    const date = new Date(stat.date);
+    const day = date.getDay();
+    completedByDay[day] += stat.completed;
+  });
+  const dayRows = days.map((d, i) => [d, completedByDay[i]]);
+  autoTable(doc, {
+    startY: y,
+    head: [['Jour', 'Tâches terminées']],
+    body: dayRows
   });
 
   doc.save('rapport_complet.pdf');
@@ -162,13 +202,47 @@ export async function exportFullReportExcel({ schedule, tasks, availabilities, e
   const wsEnergy = XLSX.utils.aoa_to_sheet(energyData);
   XLSX.utils.book_append_sheet(wb, wsEnergy, "Niveaux d'énergie");
 
-  // Statistiques de productivité
+  // Résumé des tâches terminées chaque jour
   const prodData = [
-    ['Date', 'Tâches terminées'],
+    ['Date', 'Tâches finies'],
     ...productivityStats.map(stat => [stat.date, stat.completed])
   ];
   const wsProd = XLSX.utils.aoa_to_sheet(prodData);
-  XLSX.utils.book_append_sheet(wb, wsProd, 'Productivité');
+  XLSX.utils.book_append_sheet(wb, wsProd, 'Tâches finies par jour');
+
+  // Statistiques avancées
+  // Répartition par catégorie
+  const catCounts = {};
+  tasks.forEach(t => { catCounts[t.categorie] = (catCounts[t.categorie] || 0) + 1; });
+  const catData = [
+    ['Catégorie', 'Nombre de tâches'],
+    ...Object.entries(catCounts)
+  ];
+  const wsCat = XLSX.utils.aoa_to_sheet(catData);
+  XLSX.utils.book_append_sheet(wb, wsCat, 'Tâches par catégorie');
+  // Répartition par priorité
+  const prioCounts = {};
+  tasks.forEach(t => { prioCounts[t.priority] = (prioCounts[t.priority] || 0) + 1; });
+  const prioData = [
+    ['Priorité', 'Nombre de tâches'],
+    ...Object.entries(prioCounts)
+  ];
+  const wsPrio = XLSX.utils.aoa_to_sheet(prioData);
+  XLSX.utils.book_append_sheet(wb, wsPrio, 'Tâches par priorité');
+  // Tâches terminées par jour de la semaine
+  const days = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+  const completedByDay = Array(7).fill(0);
+  productivityStats.forEach(stat => {
+    const date = new Date(stat.date);
+    const day = date.getDay();
+    completedByDay[day] += stat.completed;
+  });
+  const dayData = [
+    ['Jour', 'Tâches terminées'],
+    ...days.map((d, i) => [d, completedByDay[i]])
+  ];
+  const wsDay = XLSX.utils.aoa_to_sheet(dayData);
+  XLSX.utils.book_append_sheet(wb, wsDay, 'Tâches par jour');
 
   XLSX.writeFile(wb, 'rapport_complet.xlsx');
 }

@@ -4,8 +4,10 @@ import AvailabilityManager from "../sections/AvailabilityManager";
 import EnergyManager from "../sections/EnergyManager";
 import ScheduleManager from "../sections/ScheduleManager";
 import axios from "../api/axios";
-import ProductivityReport from "../sections/ProductivityReport";
+
 import ExportFullReportButton from "../components/ExportFullReportButton";
+import AdvancedStats from "../components/AdvancedStats";
+import SmartSuggestions from "../components/SmartSuggestions";
 
 const DashboardPage = () => {
   const [score, setScore] = useState(null);
@@ -33,7 +35,9 @@ const DashboardPage = () => {
         </div>
       </div>
       <ExportFullReportButton score={score} />
-      <ProductivityReport />
+
+      <AdvancedStats />
+      <SmartSuggestions />
     </div>
   );
 };
