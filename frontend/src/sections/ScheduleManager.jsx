@@ -157,11 +157,7 @@ const ScheduleManager = ({ score, onScoreChange }) => {
       </div>
 
       {error && <div className="text-red-500 text-sm mb-2">{error}</div>}
-      <div className="mb-2">
-        {typeof score !== 'undefined' && score !== null && (
-          <span className="text-base font-semibold">Score de productivité : <span className="text-green-700 font-bold">{score}</span></span>
-        )}
-      </div>
+
       {loading ? (
         <div>Chargement...</div>
       ) : (
@@ -196,6 +192,60 @@ const ScheduleManager = ({ score, onScoreChange }) => {
             minZoom={60 * 60 * 1000}
             maxZoom={24 * 60 * 60 * 1000}
             sidebarWidth={120}
+            itemRenderer={({ item, timelineContext, itemContext, getItemProps, getResizeProps }) => {
+              const t = tasks.find(t => t.id === item.group);
+              const category = t?.categorie || '-';
+              const description = t?.description || '';
+              const start = item.start_time;
+              const end = item.end_time;
+              const now = new Date();
+              const isDone = item.done;
+              const isCurrent = !isDone && now >= start && now <= end;
+              const isFuture = !isDone && now < start;
+              // Durée en minutes
+              const durationMin = Math.round((end - start) / 60000);
+              const hours = Math.floor(durationMin / 60);
+              const minutes = durationMin % 60;
+              const durationTxt = hours > 0 ? `${hours}h${minutes > 0 ? minutes : ''}` : `${minutes} min`;
+              // Couleurs
+              let bg = '#2563eb'; // bleu
+              let color = '#fff';
+              if (isDone) { bg = '#6b7280'; color = '#e5e7eb'; } // gris
+              else if (isCurrent) { bg = '#22c55e'; color = '#fff'; } // vert
+              else if (isFuture) { bg = '#f59e42'; color = '#fff'; } // orange
+              // Tooltip
+              const tooltip = `${item.title}\nCatégorie : ${category}\n${description ? 'Description : ' + description + '\n' : ''}Début : ${start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}\nFin : ${end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}\nDurée : ${durationTxt}`;
+              return (
+                <div
+                  {...getItemProps({
+                    style: {
+                      background: bg,
+                      color,
+                      borderRadius: 8,
+                      border: isCurrent ? '2px solid #16a34a' : 'none',
+                      fontWeight: 600,
+                      fontSize: 16,
+                      boxShadow: isCurrent ? '0 2px 8px #16a34a33' : '0 1px 4px #0002',
+                      opacity: isDone ? 0.7 : 1,
+                      cursor: 'pointer',
+                      padding: '0 8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      height: '100%',
+                    },
+                    title: tooltip,
+                  })}
+                >
+                  <div style={{width: '100%'}}>
+                    <div style={{fontSize: 16, fontWeight: 700}}>{item.title}</div>
+                    <div style={{fontSize: 13, opacity: 0.95}}>
+                      {`${start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} | ${durationTxt}`}
+                    </div>
+                    <div style={{fontSize: 12, opacity: 0.8}}>{category}</div>
+                  </div>
+                </div>
+              );
+            }}
           />
           <div className="mt-4">
             <h3 className="font-semibold mb-2">Actions sur les tâches du planning</h3>

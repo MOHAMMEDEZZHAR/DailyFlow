@@ -4,6 +4,7 @@ import AvailabilityManager from "../sections/AvailabilityManager";
 import EnergyManager from "../sections/EnergyManager";
 import ScheduleManager from "../sections/ScheduleManager";
 import axios from "../api/axios";
+import ProductivityReport from "../sections/ProductivityReport";
 
 const DashboardPage = () => {
   const [score, setScore] = useState(null);
@@ -30,6 +31,7 @@ const DashboardPage = () => {
           <ScheduleManager score={score} onScoreChange={fetchScore} />
         </div>
       </div>
+      <ProductivityReport />
     </div>
   );
 };
