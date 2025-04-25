@@ -41,6 +41,12 @@ const TaskManager = () => {
       } else {
         await axios.post("/tasks", payload);
       }
+      // Générer automatiquement le planning après ajout/modification de tâche
+      try {
+        await axios.post("/schedule/generate");
+      } catch (e) {
+        // Optionnel : afficher une alerte ou ignorer
+      }
       setForm({ name: "", duration: 1, priority: 3 });
       setEditId(null);
       fetchTasks();
