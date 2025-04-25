@@ -9,14 +9,15 @@ const getDate = (dateTimeStr) => {
   return new Date(dateTimeStr);
 };
 
-const ScheduleManager = () => {
+const ScheduleManager = ({ score, onScoreChange }) => {
   const [schedule, setSchedule] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   // Pour éviter des alertes multiples pour la même tâche
-  const [alertedTaskIds, setAlertedTaskIds] = useState([]);
+  // Pour éviter des alertes multiples pour une même tâche et un même délai
+  const [alertedTaskDelays, setAlertedTaskDelays] = useState([]); // [{taskId, delay}]
 
   // Demande la permission de notification au chargement
   useEffect(() => {
@@ -25,36 +26,42 @@ const ScheduleManager = () => {
     }
   }, []);
 
-  // Vérifie toutes les secondes si une tâche doit commencer
+  // Notifications multiples (10, 5, 2, 0 min)
   useEffect(() => {
+    const delays = [10, 5, 2, 0]; // minutes
     const interval = setInterval(() => {
       const now = new Date();
       schedule.forEach(s => {
         if (!s.start_datetime) return;
         const start = new Date(s.start_datetime);
-        // Si la tâche commence dans moins de 5 secondes (et pas déjà alertée)
-        const diff = start - now;
-        if (
-          diff <= 5000 && diff > 0 &&
-          !alertedTaskIds.includes(s.id)
-        ) {
-          const t = tasks.find(t => t.id === s.task_id);
-          // Notification système + son
-          if (window.Notification && Notification.permission === "granted") {
-            new Notification(`La tâche "${t ? t.name : 'Tâche'}" commence maintenant !`);
+        const diffMs = start - now;
+        delays.forEach(delay => {
+          const delayMs = delay * 60 * 1000;
+          if (
+            diffMs <= delayMs + 2000 && diffMs > delayMs &&
+            !alertedTaskDelays.some(a => a.taskId === s.id && a.delay === delay)
+          ) {
+            const t = tasks.find(t => t.id === s.task_id);
+            let msg = "";
+            if (delay === 0) msg = `La tâche "${t ? t.name : 'Tâche'}" commence maintenant !`;
+            else msg = `La tâche "${t ? t.name : 'Tâche'}" commence dans ${delay} minute${delay > 1 ? 's' : ''} !`;
+            if (window.Notification && Notification.permission === "granted") {
+              new Notification(msg);
+            }
+            // Jouer un son
+            try {
+              const audio = new Audio("/notify.mp3");
+              audio.play();
+            } catch (e) {}
+            // Optionnel : alert() uniquement pour le 0 min
+            if (delay === 0) alert(msg);
+            setAlertedTaskDelays(prev => [...prev, { taskId: s.id, delay }]);
           }
-          // Jouer un son
-          try {
-            const audio = new Audio("/notify.mp3");
-            audio.play();
-          } catch (e) {}
-          alert(`La tâche "${t ? t.name : 'Tâche'}" commence maintenant !`);
-          setAlertedTaskIds(prev => [...prev, s.id]);
-        }
+        });
       });
-    }, 1000); // toutes les secondes
+    }, 1000);
     return () => clearInterval(interval);
-  }, [schedule, tasks, alertedTaskIds]);
+  }, [schedule, tasks, alertedTaskDelays]);
 
   const fetchSchedule = async () => {
     setLoading(true);
@@ -83,12 +90,15 @@ const ScheduleManager = () => {
     try {
       await axios.post("/schedule/generate", { date: selectedDate });
       fetchSchedule();
+      if (typeof onScoreChange === 'function') {
+        onScoreChange();
+      }
     } catch (err) {
       setError("Erreur lors de la génération du planning");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   // Pour react-calendar-timeline
   const groups = tasks.length > 0 ? tasks.map((t) => ({ id: t.id, title: t.name })) : [{ id: 1, title: "Aucun" }];
@@ -100,6 +110,7 @@ const ScheduleManager = () => {
       title: tasks.find((t) => t.id === s.task_id)?.name || "Tâche",
       start_time: s.start_datetime ? new Date(s.start_datetime) : new Date(),
       end_time: s.end_datetime ? new Date(s.end_datetime) : new Date(),
+      done: s.done,
     }));
 
   return (
@@ -146,6 +157,11 @@ const ScheduleManager = () => {
       </div>
 
       {error && <div className="text-red-500 text-sm mb-2">{error}</div>}
+      <div className="mb-2">
+        {typeof score !== 'undefined' && score !== null && (
+          <span className="text-base font-semibold">Score de productivité : <span className="text-green-700 font-bold">{score}</span></span>
+        )}
+      </div>
       {loading ? (
         <div>Chargement...</div>
       ) : (
@@ -181,6 +197,36 @@ const ScheduleManager = () => {
             maxZoom={24 * 60 * 60 * 1000}
             sidebarWidth={120}
           />
+          <div className="mt-4">
+            <h3 className="font-semibold mb-2">Actions sur les tâches du planning</h3>
+            <ul className="space-y-2">
+              {schedule.map(s => {
+                const t = tasks.find(t => t.id === s.task_id);
+                return (
+                  <li key={s.id} className="flex items-center gap-2">
+                    <span className={s.done ? "line-through text-gray-400" : ""}>{t ? t.name : "Tâche"} ({new Date(s.start_datetime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(s.end_datetime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})</span>
+                    <button
+                      className={`px-2 py-1 rounded text-xs ${s.done ? 'bg-gray-400' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                      disabled={!!s.done}
+                      onClick={async () => {
+                        try {
+                          await axios.put(`/schedule/${s.id}/done`);
+                          fetchSchedule();
+                        if (typeof onScoreChange === 'function') {
+                          onScoreChange();
+                        }
+                        } catch (e) {
+                          alert("Erreur lors de la validation de la tâche");
+                        }
+                      }}
+                    >
+                      {s.done ? 'Terminée' : 'Terminer'}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </div>
       )}
     </section>

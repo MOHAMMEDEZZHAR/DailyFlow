@@ -22,8 +22,12 @@ function getPeriodFromTime(min) {
 
 export function generateSchedule(tasks, slots, energyLevels, selectedDate) {
   const planning = [];
-  // Trie par priorité puis durée
+  // Trie par catégorie (Urgent > Travail > Perso > Autre), puis priorité, puis durée
+  const categorieOrder = { 'Urgent': 1, 'Travail': 2, 'Perso': 3, 'Autre': 4 };
   const sortedTasks = [...tasks].sort((a, b) => {
+    const catA = categorieOrder[a.categorie] || 99;
+    const catB = categorieOrder[b.categorie] || 99;
+    if (catA !== catB) return catA - catB;
     if (b.priority !== a.priority) return b.priority - a.priority;
     return b.duration - a.duration;
   });

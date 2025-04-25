@@ -7,6 +7,7 @@ import taskRoutes from './routes/taskRoutes.js';
 import availabilityRoutes from './routes/availabilityRoutes.js';
 import energyRoutes from './routes/energyRoutes.js';
 import scheduleRoutes from './routes/scheduleRoutes.js';
+import scoreRoutes from './routes/scoreRoutes.js';
 import { errorHandler } from './middlewares/errorMiddleware.js';
 
 dotenv.config();
@@ -21,6 +22,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/availability', availabilityRoutes);
 app.use('/api/energy', energyRoutes);
 app.use('/api/schedule', scheduleRoutes);
+app.use('/api/score', scoreRoutes);
 
 app.use(errorHandler);
 

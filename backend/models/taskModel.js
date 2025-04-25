@@ -1,9 +1,9 @@
 import { pool } from '../config/db.js';
 
-export const createTask = async ({ name, duration, priority, user_id }) => {
+export const createTask = async ({ name, duration, priority, user_id, description = null, categorie = null }) => {
   const [result] = await pool.query(
-    'INSERT INTO task (name, duration, priority, user_id) VALUES (?, ?, ?, ?)',
-    [name, duration, priority, user_id]
+    'INSERT INTO task (name, duration, priority, user_id, description, categorie) VALUES (?, ?, ?, ?, ?, ?)',
+    [name, duration, priority, user_id, description, categorie]
   );
   return result.insertId;
 };
@@ -13,10 +13,10 @@ export const getTasksByUser = async (user_id) => {
   return rows;
 };
 
-export const updateTask = async (task_id, { name, duration, priority }) => {
+export const updateTask = async (task_id, { name, duration, priority, description = null, categorie = null }) => {
   await pool.query(
-    'UPDATE task SET name = ?, duration = ?, priority = ? WHERE id = ?',
-    [name, duration, priority, task_id]
+    'UPDATE task SET name = ?, duration = ?, priority = ?, description = ?, categorie = ? WHERE id = ?',
+    [name, duration, priority, description, categorie, task_id]
   );
 };
 

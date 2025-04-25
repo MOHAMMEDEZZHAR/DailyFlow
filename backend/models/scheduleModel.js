@@ -23,3 +23,10 @@ export const updateScheduleEntry = async (id, { start_datetime, end_datetime, ta
     [start_datetime, end_datetime, task_id, id]
   );
 };
+
+export const markScheduleDone = async (id) => {
+  await pool.query(
+    'UPDATE generated_schedule SET done = 1, done_at = NOW() WHERE id = ?',
+    [id]
+  );
+};

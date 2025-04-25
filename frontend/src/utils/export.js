@@ -15,13 +15,15 @@ export function exportScheduleToPDF(schedule, tasks) {
     const task = tasks.find(t => t.id === s.task_id);
     return [
       task ? task.name : 'Tâche',
+      task ? task.categorie || '-' : '-',
+      task ? task.description || '-' : '-',
       formatDateTime(s.start_datetime),
       formatDateTime(s.end_datetime)
     ];
   });
   try {
     autoTable(doc, {
-      head: [['Tâche', 'Début', 'Fin']],
+      head: [['Tâche', 'Catégorie', 'Description', 'Début', 'Fin']],
       body: rows
     });
   } catch (e) {
@@ -37,11 +39,13 @@ export function exportScheduleToPDF(schedule, tasks) {
 
 export function exportScheduleToExcel(schedule, tasks) {
   const wsData = [
-    ['Tâche', 'Début', 'Fin'],
+    ['Tâche', 'Catégorie', 'Description', 'Début', 'Fin'],
     ...schedule.map(s => {
       const task = tasks.find(t => t.id === s.task_id);
       return [
         task ? task.name : 'Tâche',
+        task ? task.categorie || '-' : '-',
+        task ? task.description || '-' : '-',
         formatDateTime(s.start_datetime),
         formatDateTime(s.end_datetime)
       ];

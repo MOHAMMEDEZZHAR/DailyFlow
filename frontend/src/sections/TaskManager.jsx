@@ -3,9 +3,11 @@ import axios from "../api/axios";
 
 const priorities = [1, 2, 3, 4, 5];
 
+const categories = ["Travail", "Perso", "Urgent", "Autre"];
+
 const TaskManager = () => {
   const [tasks, setTasks] = useState([]);
-  const [form, setForm] = useState({ name: "", duration: 1, priority: 3 }); // durée en heures côté UI
+  const [form, setForm] = useState({ name: "", duration: 1, priority: 3, description: "", categorie: categories[0] }); // durée en heures côté UI
   const [loading, setLoading] = useState(false);
   const [editId, setEditId] = useState(null);
   const [error, setError] = useState(null);
@@ -25,7 +27,6 @@ const TaskManager = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // Si on modifie la durée, on stocke en heures côté UI
     setForm({ ...form, [name]: name === "duration" ? Number(value) : value });
   };
 
@@ -47,7 +48,7 @@ const TaskManager = () => {
       } catch (e) {
         // Optionnel : afficher une alerte ou ignorer
       }
-      setForm({ name: "", duration: 1, priority: 3 });
+      setForm({ name: "", duration: 1, priority: 3, description: "", categorie: categories[0] });
       setEditId(null);
       fetchTasks();
     } catch (err) {
@@ -58,7 +59,13 @@ const TaskManager = () => {
   };
 
   const handleEdit = (task) => {
-    setForm({ name: task.name, duration: task.duration, priority: task.priority });
+    setForm({
+      name: task.name,
+      duration: task.duration / 60, // on repasse en heures côté UI
+      priority: task.priority,
+      description: task.description || "",
+      categorie: task.categorie || categories[0],
+    });
     setEditId(task.id);
   };
 
@@ -73,7 +80,7 @@ const TaskManager = () => {
       <h2 className="text-xl font-bold mb-2">Tâches à faire</h2>
       <form onSubmit={handleSubmit} className="flex flex-col gap-2 mb-4">
         {error && <div className="text-red-500 text-sm">{error}</div>}
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-end">
           <input
             type="text"
             name="name"
@@ -94,7 +101,6 @@ const TaskManager = () => {
             className="w-28 px-2 py-1 rounded border dark:bg-gray-900"
             required
           />
-
           <select
             name="priority"
             value={form.priority}
@@ -107,22 +113,45 @@ const TaskManager = () => {
               </option>
             ))}
           </select>
-          <button
-            type="submit"
-            className="px-4 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
-            disabled={loading}
+          <select
+            name="categorie"
+            value={form.categorie}
+            onChange={handleChange}
+            className="w-32 px-2 py-1 rounded border dark:bg-gray-900"
+            required
           >
-            {editId ? "Modifier" : "Ajouter"}
-          </button>
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
         </div>
+        <button
+          type="submit"
+          className="px-4 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
+          disabled={loading}
+        >
+          {editId ? "Modifier" : "Ajouter"}
+        </button>
+        <textarea
+          name="description"
+          placeholder="Description de la tâche"
+          value={form.description}
+          onChange={handleChange}
+          className="px-2 py-1 rounded border dark:bg-gray-900 resize-none"
+          rows={2}
+        />
       </form>
+      {/* Si tu veux afficher la date du planning ici, fais-le en dehors du bouton : */}
+      {/* <div className="mt-2 text-right text-sm text-gray-600">Date du planning : {selectedDate}</div> */}
       <ul className="divide-y divide-gray-200 dark:divide-gray-700">
         {tasks.map((task) => (
-          <li key={task.id} className="flex items-center justify-between py-2">
-            <span>
-              <span className="font-semibold">{task.name}</span> — {(task.duration / 60).toLocaleString(undefined, { maximumFractionDigits: 2 })} h — Priorité {task.priority}
-            </span>
-            <span className="flex gap-2">
+          <li key={task.id} className="flex items-start justify-between py-2">
+            <div className="flex-1">
+              <span className="font-semibold">{task.name}</span> — {(task.duration / 60).toLocaleString(undefined, { maximumFractionDigits: 2 })} h — Priorité {task.priority}<br />
+              <span className="text-xs text-gray-500">Catégorie : {task.categorie || "-"}</span><br />
+              {task.description && <span className="block text-sm text-gray-700 dark:text-gray-300">{task.description}</span>}
+            </div>
+            <span className="flex gap-2 mt-1">
               <button className="text-blue-600" onClick={() => handleEdit(task)}>
                 Modifier
               </button>
